@@ -29,10 +29,8 @@ class EventHandler(AssistantEventHandler):
 
     @override
     def on_text_created(self, text) -> None:
-        print(f"********{text}********")
         print(f"\nassistant > ", end="", flush=True)
-        
-        
+
     @override
     def on_text_delta(self, delta, snapshot):
         print(delta.value, end="", flush=True)
@@ -122,8 +120,7 @@ def handle_message(message):
 
 
 def add_message_to_thread(thread_id, message, sid):
-    print("")
-    print("client >", message)
+    print(f"\nclient >", message)
     message = client.beta.threads.messages.create(
         thread_id=thread_id, role="user", content=message
     )
