@@ -14,7 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 5000
 
 # Define environment variable
-ENV NAME World
+ENV FLASK_APP=app.py
 
-# Run app.py when the container launches
-CMD ["gunicorn", "--worker-class", "eventlet", "-w", "1", "app:app", "--bind", "0.0.0.0:5000"]
+# Use Gunicorn to serve the application with eventlet support for handling websocket
+CMD ["gunicorn", "--worker-class", "gevent", "-w", "1", "app:app", "--bind", "0.0.0.0:5000"]
+
