@@ -35,3 +35,24 @@ def get_itinerary(pnr):
     except requests.RequestException as e:
         print(f"Error fetching itinerary: {e}")
         return None
+
+def flight_schedule(departure_airport, arrival_airport, year, month, day):
+    # API endpoint
+    url = f"https://api.flightstats.com/flex/schedules/rest/v1/json/from/{departure_airport}/to/{arrival_airport}/departing/{year}/{month}/{day}"
+    
+    # API credentials (replace with your actual appId and appKey)
+    params = {
+        'appId': '38d3993c',
+        'appKey': 'b26e24febea74f8426496d989190874c'
+    }
+    
+    # Make the API request
+    response = requests.get(url, params=params)
+    
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Return the JSON data
+        return response.json()
+    else:
+        # Return the error status and message if something went wrong
+        return {'error': response.status_code, 'message': 'Failed to retrieve data'}

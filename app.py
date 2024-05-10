@@ -3,15 +3,19 @@ import os
 from flask import Flask, session, request
 from flask_socketio import SocketIO
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import AzureOpenAI
 from typing_extensions import override
 from openai import AssistantEventHandler
 
-from utils import get_itinerary
+from utils import flight_schedule, get_itinerary
 
 assistant_id = os.getenv("assistant_id")
 
-client = OpenAI()
+client = AzureOpenAI(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
+    api_version="2024-02-15-preview",
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    )
 
 # Global variable to store the thread
 global_thread = None
@@ -79,6 +83,19 @@ class EventHandler(AssistantEventHandler):
             elif tool.function.name == "change_flight":
                 tool_outputs.append(
                     {"tool_call_id": tool.id, "output": "Flight changed successfully"}
+                )
+            elif tool.function.name == "flight_schedule":
+                print(json.loads(tool.function.arguments))
+                arguments = json.loads(tool.function.arguments)
+                departure_airport = arguments["departure_airport"]
+                arrival_airport = arguments["arrival_airport"]
+                year = arguments["year"]
+                month = arguments["month"]
+                day = arguments["day"]
+                solution = flight_schedule(departure_airport, arrival_airport, year, month, day)
+                print(solution)
+                tool_outputs.append(
+                    {"tool_call_id": tool.id, "output": json.dumps(solution)}
                 )
 
         self.submit_tool_outputs(tool_outputs, run_id)
