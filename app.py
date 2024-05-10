@@ -9,7 +9,7 @@ from openai import AssistantEventHandler
 
 from utils import flight_schedule, get_itinerary
 
-assistant_id = os.getenv("assistant_id")
+assistant_id = os.getenv("ASSISTANT_ID")
 
 client = AzureOpenAI(
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),  

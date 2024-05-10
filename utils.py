@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-cancellation_url = os.getenv("CANCELLATION_URL")
+CANCELLATION_URL = os.getenv("CANCELLATION_URL")
 
 
 def get_itinerary(pnr):
@@ -28,7 +28,7 @@ def get_itinerary(pnr):
     }
 
     try:
-        res = requests.post(cancellation_url, json=data)
+        res = requests.post(CANCELLATION_URL, json=data)
         itinerary = res.text
         print(f"itinerary: {itinerary}")
         return itinerary
