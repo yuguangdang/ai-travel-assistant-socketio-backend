@@ -7,15 +7,15 @@ from openai import AzureOpenAI
 from typing_extensions import override
 from openai import AssistantEventHandler
 
-from utils import flight_schedule, get_itinerary
+from utils import flight_schedule, get_itinerary, visa_check
 
 assistant_id = os.getenv("ASSISTANT_ID")
 
 client = AzureOpenAI(
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
     api_version="2024-02-15-preview",
-    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-    )
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+)
 
 # Global variable to store the thread
 global_thread = None
@@ -80,10 +80,6 @@ class EventHandler(AssistantEventHandler):
                 tool_outputs.append(
                     {"tool_call_id": tool.id, "output": "Flight cancelled successfully"}
                 )
-            elif tool.function.name == "change_flight":
-                tool_outputs.append(
-                    {"tool_call_id": tool.id, "output": "Flight changed successfully"}
-                )
             elif tool.function.name == "flight_schedule":
                 print(json.loads(tool.function.arguments))
                 arguments = json.loads(tool.function.arguments)
@@ -92,10 +88,35 @@ class EventHandler(AssistantEventHandler):
                 year = arguments["year"]
                 month = arguments["month"]
                 day = arguments["day"]
-                solution = flight_schedule(departure_airport, arrival_airport, year, month, day)
+                solution = flight_schedule(
+                    departure_airport, arrival_airport, year, month, day
+                )
                 print(solution)
                 tool_outputs.append(
                     {"tool_call_id": tool.id, "output": json.dumps(solution)}
+                )
+            elif tool.function.name == "visa_check":
+                arguments = json.loads(tool.function.arguments)
+                print(arguments)
+                passportCountry = arguments.get("passportCountry")
+                departureDate = arguments.get("departureDate")
+                arrivalDate = arguments.get("arrivalDate")
+                departureAirport = arguments.get("departureAirport")
+                arrivalAirport = arguments.get("arrivalAirport")
+                transitCities = arguments.get("transitCities", [])
+                travelPurpose = arguments.get("travelPurpose")
+                result = visa_check(
+                    passportCountry,
+                    departureDate,
+                    arrivalDate,
+                    departureAirport,
+                    arrivalAirport,
+                    transitCities,
+                    travelPurpose,
+                )
+                print(result)
+                tool_outputs.append(
+                    {"tool_call_id": tool.id, "output": json.dumps(result)}
                 )
 
         self.submit_tool_outputs(tool_outputs, run_id)
