@@ -7,7 +7,7 @@ from openai import AzureOpenAI
 from typing_extensions import override
 from openai import AssistantEventHandler
 
-from utils import flight_schedule, get_itinerary, visa_check
+from functions import flight_schedule, get_itinerary, getLiveBookings, visa_check
 
 assistant_id = os.getenv("ASSISTANT_ID")
 
@@ -73,16 +73,14 @@ class EventHandler(AssistantEventHandler):
         tool_outputs = []
         for tool in data.required_action.submit_tool_outputs.tool_calls:
             if tool.function.name == "get_itinerary":
-                pnr = json.loads(tool.function.arguments)["PNR"]
+                arguments = json.loads(tool.function.arguments)
+                print(f"{tool.function.name} arguments: {arguments}")
+                pnr = arguments["PNR"]
                 itinerary = get_itinerary(pnr)
                 tool_outputs.append({"tool_call_id": tool.id, "output": itinerary})
-            elif tool.function.name == "cancel_flights":
-                tool_outputs.append(
-                    {"tool_call_id": tool.id, "output": "Flight cancelled successfully"}
-                )
             elif tool.function.name == "flight_schedule":
-                print(json.loads(tool.function.arguments))
                 arguments = json.loads(tool.function.arguments)
+                print(f"{tool.function.name} arguments: {arguments}")
                 departure_airport = arguments["departure_airport"]
                 arrival_airport = arguments["arrival_airport"]
                 year = arguments["year"]
@@ -97,7 +95,7 @@ class EventHandler(AssistantEventHandler):
                 )
             elif tool.function.name == "visa_check":
                 arguments = json.loads(tool.function.arguments)
-                print(arguments)
+                print(f"{tool.function.name} arguments: {arguments}")
                 passportCountry = arguments.get("passportCountry")
                 departureDate = arguments.get("departureDate")
                 arrivalDate = arguments.get("arrivalDate")
@@ -117,6 +115,17 @@ class EventHandler(AssistantEventHandler):
                 print(result)
                 tool_outputs.append(
                     {"tool_call_id": tool.id, "output": json.dumps(result)}
+                )
+            elif tool.function.name == "getLiveBookings":
+                arguments = json.loads(tool.function.arguments)
+                print(f"{tool.function.name} arguments: {arguments}")
+                role = arguments["role"]
+                email = arguments["email"]
+                debtorId = arguments["debtorId"]
+                bookings = getLiveBookings(role, email, debtorId)
+                print(bookings)
+                tool_outputs.append(
+                    {"tool_call_id": tool.id, "output": json.dumps(bookings)}
                 )
 
         self.submit_tool_outputs(tool_outputs, run_id)
@@ -138,15 +147,20 @@ def index():
     return "Chatbot Server is running"
 
 
-@socketio.on("page_loaded")
-def handle_message(data):
-    print("Page has been refreshed or loaded")
+@socketio.on("session_start")
+def handle_session_start(data):
+    print("Websokcet connection established. Session started.")
+    session["metadata"] = data
+    print("Session metadata saved:", session)
     if "thread_id" not in session:
         thread = client.beta.threads.create()
         print("New thread has been created.")
         session["thread_id"] = thread.id
         print(f"New thread ({thread.id}) has been created for a new session.")
-        add_message_to_thread(thread.id, "Hello", request.sid)
+        greeting_prompt = (
+            f"Hello, please remember my metadata throughout our conversation: {data}"
+        )
+        add_message_to_thread(thread.id, greeting_prompt, request.sid)
 
 
 @socketio.on("chat message")

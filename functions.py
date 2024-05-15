@@ -1,6 +1,9 @@
+from datetime import date, datetime
 import json
 import os
+import uuid
 import requests
+import pymssql
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -37,6 +40,7 @@ def get_itinerary(pnr):
         print(f"Error fetching itinerary: {e}")
         return None
 
+
 def flight_schedule(departure_airport, arrival_airport, year, month, day):
     # API endpoint
     url = f"https://api.flightstats.com/flex/schedules/rest/v1/json/from/{departure_airport}/to/{arrival_airport}/departing/{year}/{month}/{day}"
@@ -54,6 +58,7 @@ def flight_schedule(departure_airport, arrival_airport, year, month, day):
     else:
         # Return the error status and message if something went wrong
         return {"error": response.status_code, "message": "Failed to retrieve data"}
+
 
 def visa_check(
     passportCountry: str,  # Country code of the passport (e.g., 'USA')
@@ -127,7 +132,7 @@ def visa_check(
 
     # Send the POST request to the Sherpa API and return the parsed JSON response
     response = requests.post(url, headers=headers, data=payload)
-    
+
     msg = ""
     serpa_data = json.loads(response.text)
     detailsId = []
@@ -143,9 +148,7 @@ def visa_check(
                 enforcement = group["enforcement"]
 
                 print(visaReq, " Enforcement:", enforcement)
-                msg = (
-                    msg + "\n Enforcement to " + group["name"] + ": " + enforcement
-                )
+                msg = msg + "\n Enforcement to " + group["name"] + ": " + enforcement
 
     details = ""
     immi_url = ""
@@ -172,12 +175,9 @@ def visa_check(
                     + inc["attributes"]["lengthOfStay"][0]["text"]
                     + "\n"
                 )
-            print(
-                "\nFor more information: ", inc["attributes"]["sources"][0]["url"]
-            )
+            print("\nFor more information: ", inc["attributes"]["sources"][0]["url"])
             immi_url += (
-                "\n\nFor more information: "
-                + inc["attributes"]["sources"][0]["url"]
+                "\n\nFor more information: " + inc["attributes"]["sources"][0]["url"]
             )
         if "type" in inc and inc["type"] == "RESTRICTION":
             print(inc["attributes"]["description"])
@@ -189,5 +189,71 @@ def visa_check(
     return msg
 
 
+def getLiveBookings(role, email, debtorId):
+    """Fetch and return the bookings/itineraries for the given role, email, and debtorId."""
+
+    if role != "traveller":
+        return "You are listed as a Travel Arranger in your profile. Please enter the Agency Reference or PNR."
+
+    server = "sqlserv-preview-prod-fog.secondary.database.windows.net"
+    database = "PREVIEW"
+    username = "scoutreader"
+    password = "termFinish_08!"
+    port = 1433
+
+    query = f"""
+        SELECT TOP (1000) [PNRID], [PNRLOC], [CRS], [CREATEDATE], [AGENCY], [BOOKDATE], [PSEUDO],
+               [FIRSTFLIGHTDATE], [LASTFLIGHTDATE], [TRAVELER_UID], [COMPANY_ID], [CLIENT_GROUP_CODE],
+               [HIROLL], [HIHIER], [ONLINE_BKG], [MISSING_HTL], [EMAIL_TRAVELER], [EMAIL_ADMIN1],
+               [EMAIL_ADMIN2], [EMAIL_OTHER1], [EMAIL_MANAGER], [CELL_PHONE], [EMERG_NAME], [EMERG_PHONE],
+               [AIR_CITIES], [AIR_CARRIERS], [PROFILE_ID], [GLOBAL_GROUP_CODE], [AGENTID]
+        FROM [dbo].[PREVIEW_PNR]
+        WHERE COMPANY_ID='{debtorId}' AND EMAIL_TRAVELER='{email}'
+    """
+
+    try:
+        conn = pymssql.connect(
+            server=server,
+            user=username,
+            password=password,
+            database=database,
+            port=port,
+        )
+        cursor = conn.cursor(as_dict=True)
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        conn.close()
+    except Exception as e:
+        return f"Error connecting to database: {e}"
+
+    # Filter out bookings where the LASTFLIGHTDATE is in the past
+    today = datetime.today().date()
+    future_bookings = []
+
+    for row in rows:
+        if "LASTFLIGHTDATE" in row and row["LASTFLIGHTDATE"]:
+            if row["LASTFLIGHTDATE"].date() >= today:
+                future_bookings.append(row)
+
+    # Convert date and datetime objects to strings
+    for row in future_bookings:
+        for key, value in row.items():
+            if isinstance(value, (datetime, date)):
+                row[key] = value.isoformat()
+            elif isinstance(value, uuid.UUID):
+                row[key] = str(value)
+
+    return future_bookings
+
+
+
+#################################### Example usage ####################################
+
 # result = visa_check('USA', '2024-07-01', '2024-07-15', 'JFK', 'LHR', ['CDG'], 'tourism')
 # print(result)
+
+# role = "traveller"
+# email = "ben.saul@downergroup.com"
+# debtorId = "EDIZZZZZZZ"
+# bookings = getBookings(role, email, debtorId)
+# print(json.dumps(bookings, indent=4))
