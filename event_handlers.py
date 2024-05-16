@@ -3,7 +3,7 @@ import os
 from openai import AssistantEventHandler
 from typing_extensions import override
 
-from functions import flight_schedule, get_itinerary, getLiveBookings, visa_check
+from functions import chat_with_consultant, flight_schedule, get_itinerary, get_live_bookings, visa_check
 
 
 class EventHandler(AssistantEventHandler):
@@ -48,6 +48,9 @@ class EventHandler(AssistantEventHandler):
                 self.socketio.emit(
                     "chat message chunk", {"data": output_logs}, room=self.sid
                 )
+        elif delta.type == "function":
+            pass
+        
 
     @override
     def on_event(self, event):
@@ -104,16 +107,27 @@ class EventHandler(AssistantEventHandler):
                 tool_outputs.append(
                     {"tool_call_id": tool.id, "output": json.dumps(result)}
                 )
-            elif tool.function.name == "getLiveBookings":
+            elif tool.function.name == "get_live_bookings":
                 arguments = json.loads(tool.function.arguments)
                 print(f"{tool.function.name} arguments: {arguments}")
                 role = arguments["role"]
                 email = arguments["email"]
                 debtorId = arguments["debtorId"]
-                bookings = getLiveBookings(role, email, debtorId)
+                bookings = get_live_bookings(role, email, debtorId)
                 print(bookings)
                 tool_outputs.append(
                     {"tool_call_id": tool.id, "output": json.dumps(bookings)}
+                )
+            elif tool.function.name == "chat_with_consultant":
+                arguments = json.loads(tool.function.arguments)
+                print(f"{tool.function.name} arguments: {arguments}")
+                initial_message = arguments["initial_message"]
+                chat_response = chat_with_consultant(initial_message)
+                print(chat_response)
+                self.socketio.emit("chat_with_consultant", chat_response, room=self.sid)
+                response = "Connecting the client to a consultnat in a new window."
+                tool_outputs.append(
+                    {"tool_call_id": tool.id, "output": json.dumps(response)}
                 )
 
         # Submit the tool outputs

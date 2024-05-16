@@ -4,18 +4,17 @@ import os
 import uuid
 import requests
 import pymssql
+from flask import session
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Endpoint for cancellation requests
 CANCELLATION_URL = os.getenv("CANCELLATION_URL")
 
 
 def get_itinerary(pnr):
     """
-    Retrieve the itinerary based on the PNR (Passenger Name Record).
+    Retrieve the itinerary based on the PNR.
 
     Parameters:
     pnr (str): The Passenger Name Record identifier.
@@ -44,19 +43,6 @@ def get_itinerary(pnr):
 
 
 def flight_schedule(departure_airport, arrival_airport, year, month, day):
-    """
-    Retrieve flight schedule based on departure and arrival airports, and date.
-
-    Parameters:
-    departure_airport (str): The departure airport code.
-    arrival_airport (str): The arrival airport code.
-    year (int): The year of departure.
-    month (int): The month of departure.
-    day (int): The day of departure.
-
-    Returns:
-    dict: The flight schedule data, or an error message if the request fails.
-    """
     # API endpoint
     url = f"https://api.flightstats.com/flex/schedules/rest/v1/json/from/{departure_airport}/to/{arrival_airport}/departing/{year}/{month}/{day}"
 
@@ -87,17 +73,7 @@ def visa_check(
     """
     Makes a request to the Sherpa API to check visa requirements based on travel details.
 
-    Parameters:
-    passportCountry (str): The passport country code.
-    departureDate (str): The departure date in YYYY-MM-DD format.
-    arrivalDate (str): The arrival date in YYYY-MM-DD format.
-    departureAirport (str): The departure airport code.
-    arrivalAirport (str): The arrival airport code.
-    transitCities (list): List of transit city airport codes.
-    travelPurpose (str): The purpose of travel (e.g., 'TOURISM').
-
-    Returns:
-    str: A summary of visa requirements and related information.
+    Returns the JSON response from the Sherpa API.
     """
     url = "https://requirements-api.joinsherpa.com/v3/trips?include=restriction,procedure&base&=&="
     locationCode = "airportCode"  # This could be dynamic based on the requirements; set as 'airportCode' for example
@@ -179,9 +155,13 @@ def visa_check(
     immi_url = ""
     msg = msg + "\n"
     for inc in serpa_data["included"]:
+        # print("..............")
+        # print(inc)
+
         if inc["id"] in detailsId:
             print(inc["attributes"]["description"])
             details = details + inc["attributes"]["description"] + "\n"
+            # msg=msg+"\n\n Details: " +inc['attributes']['description']
             if "lengthOfStay" in inc["attributes"]:
                 print(inc["attributes"]["lengthOfStay"])
                 print(
@@ -203,36 +183,25 @@ def visa_check(
         if "type" in inc and inc["type"] == "RESTRICTION":
             print(inc["attributes"]["description"])
             details = details + inc["attributes"]["description"] + "\n"
+            # msg=msg+"\n\n Details: " +inc['attributes']['description']
 
     msg = msg + "\nDetails: \n" + details
     msg = msg + immi_url
     return msg
 
 
-def getLiveBookings(role, email, debtorId):
-    """
-    Fetch and return the bookings/itineraries for the given role, email, and debtorId.
+def get_live_bookings(role, email, debtorId):
+    """Fetch and return the bookings/itineraries for the given role, email, and debtorId."""
 
-    Parameters:
-    role (str): The user's role (e.g., 'traveller').
-    email (str): The user's email address.
-    debtorId (str): The debtor ID associated with the user.
-
-    Returns:
-    list: A list of dictionaries containing booking details, or an error message if the request fails.
-    """
-    # Check if the role is not 'traveller'
     if role != "traveller":
         return "You are listed as a Travel Arranger in your profile. Please enter the Agency Reference or PNR."
 
-    # Database connection details
     server = "sqlserv-preview-prod-fog.secondary.database.windows.net"
     database = "PREVIEW"
     username = "scoutreader"
     password = "termFinish_08!"
     port = 1433
 
-    # SQL query to fetch bookings
     query = f"""
         SELECT TOP (1000) [PNRID], [PNRLOC], [CRS], [CREATEDATE], [AGENCY], [BOOKDATE], [PSEUDO],
                [FIRSTFLIGHTDATE], [LASTFLIGHTDATE], [TRAVELER_UID], [COMPANY_ID], [CLIENT_GROUP_CODE],
@@ -244,7 +213,6 @@ def getLiveBookings(role, email, debtorId):
     """
 
     try:
-        # Connect to the database
         conn = pymssql.connect(
             server=server,
             user=username,
@@ -279,15 +247,37 @@ def getLiveBookings(role, email, debtorId):
     return future_bookings
 
 
+def chat_with_consultant(initial_message):
+    metadata = session.get("metadata", {})
+
+    payload = {
+        "chatId": str(uuid.uuid4()),  # Generate a unique chat ID
+        "clientName": metadata.get("name", "Client"),
+        "clientEmail": metadata.get("email", ""),
+        "debtorId": metadata.get("debtorId", ""),
+        "reason": "Client requested to talk to a consultant",
+        "initialMessage": initial_message,
+    }
+
+    try:
+        response = requests.post(os.getenv("CHAT_INIT"), json=payload)
+        if response.status_code == 200:
+            return response.json()  # Return the response as a dictionary
+        else:
+            print(f"Handover to consultant failed: {response.status_code}")
+            return None
+    except requests.RequestException as e:
+        print(f"Error initiating handover to consultant: {e}")
+        return None
+
+
 #################################### Example usage ####################################
 
-# Example for checking visa requirements
 # result = visa_check('USA', '2024-07-01', '2024-07-15', 'JFK', 'LHR', ['CDG'], 'tourism')
 # print(result)
 
-# Example for fetching live bookings
 # role = "traveller"
 # email = "ben.saul@downergroup.com"
 # debtorId = "EDIZZZZZZZ"
-# bookings = getLiveBookings(role, email, debtorId)
+# bookings = getBookings(role, email, debtorId)
 # print(json.dumps(bookings, indent=4))
