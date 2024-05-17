@@ -13,7 +13,6 @@ from event_handlers import add_message_to_thread
 load_dotenv()
 
 # Initialize Redis
-redis_url = os.getenv("REDIS_URL")
 try:
     redis_client = redis.StrictRedis(
         host=os.getenv("REDIS_HOST"),
@@ -45,7 +44,7 @@ app.config["SESSION_USE_SIGNER"] = True
 app.config["SESSION_REDIS"] = redis_client
 Session(app)
 jwt = JWTManager(app)
-socketio = SocketIO(app, message_queue=redis_url, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 
 # Define a simple route to check if the server is running
