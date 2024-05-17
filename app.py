@@ -1,7 +1,3 @@
-import eventlet
-
-eventlet.monkey_patch()
-
 import os
 from flask import Flask, session, request
 from flask_jwt_extended import JWTManager, decode_token
