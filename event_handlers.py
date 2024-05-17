@@ -125,7 +125,7 @@ class EventHandler(AssistantEventHandler):
                 chat_response = chat_with_consultant(initial_message)
                 print(chat_response)
                 self.socketio.emit("chat_with_consultant", chat_response, room=self.sid)
-                response = "Connecting the client to a consultnat in a new window."
+                response = "Connecting the client to a consultnat in a new tab."
                 tool_outputs.append(
                     {"tool_call_id": tool.id, "output": json.dumps(response)}
                 )

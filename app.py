@@ -1,6 +1,7 @@
 import os
 from flask import Flask, session, request
-from flask_socketio import SocketIO
+from flask_jwt_extended import JWTManager, decode_token
+from flask_socketio import SocketIO, disconnect
 from dotenv import load_dotenv
 from openai import AzureOpenAI
 
@@ -19,6 +20,8 @@ client = AzureOpenAI(
 
 # Initialize Flask app and Flask-SocketIO
 app = Flask(__name__)
+app.config["JWT_SECRET_KEY"] = "secret_key_provided_by_portal"
+jwt = JWTManager(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 
@@ -29,29 +32,38 @@ def index():
 
 
 # Event handler for 'session_start' event
-@socketio.on("session_start")
-def handle_session_start(data):
-    # Log connection establishment
-    print("WebSocket connection established. Session started.")
+@socketio.on("connect")
+def handle_session_start():
+    try:
+        # Log connection establishment
+        print("WebSocket connection established. Session started.")
+        token = request.args.get("token")
+        if token:
+            # Save the session metadata
+            decoded_token = decode_token(token)
+            session["metadata"] = decoded_token
+            print("Session metadata saved:", session)
 
-    # Save the session metadata
-    session["metadata"] = data
-    print("Session metadata saved:", session)
+            # Check if a thread ID is already in the session, if not, create a new thread
+            if "thread_id" not in session:
+                thread = client.beta.threads.create()
+                print("New thread has been created.")
+                session["thread_id"] = thread.id
+                print(f"New thread ({thread.id}) has been created for a new session.")
 
-    # Check if a thread ID is already in the session, if not, create a new thread
-    if "thread_id" not in session:
-        thread = client.beta.threads.create()
-        print("New thread has been created.")
-        session["thread_id"] = thread.id
-        print(f"New thread ({thread.id}) has been created for a new session.")
+                # Create a greeting prompt including the metadata
+                greeting_prompt = f"Hello, please remember my metadata throughout our conversation: {session['metadata']}"
 
-        # Create a greeting prompt including the metadata
-        greeting_prompt = (
-            f"Hello, please remember my metadata throughout our conversation: {data}"
-        )
-
-        # Add the greeting message to the thread
-        add_message_to_thread(thread.id, greeting_prompt, request.sid, client, socketio)
+                # Add the greeting message to the thread
+                add_message_to_thread(
+                    thread.id, greeting_prompt, request.sid, client, socketio
+                )
+        else:
+            print("No token provided.")
+            disconnect()
+    except Exception as e:
+        print("JWT verification failed:", e)
+        disconnect()
 
 
 # Event handler for 'chat message' event
