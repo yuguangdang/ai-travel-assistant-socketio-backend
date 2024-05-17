@@ -1,14 +1,30 @@
+import eventlet
+eventlet.monkey_patch()
+
 import os
 from flask import Flask, session, request
 from flask_jwt_extended import JWTManager, decode_token
 from flask_socketio import SocketIO, disconnect
+from flask_session import Session
 from dotenv import load_dotenv
 from openai import AzureOpenAI
+import redis
 
 from event_handlers import add_message_to_thread
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Initialize Redis
+redis_url = os.getenv('REDIS_URL')
+try:
+    redis_client = redis.StrictRedis.from_url(redis_url)
+    redis_client.ping()
+    print("Connected to Redis server.")
+except redis.ConnectionError as e:
+    print(f"Could not connect to Redis server: {e}")
+    exit(1)
+
 
 # Initialize Azure OpenAI client with environment variables
 assistant_id = os.getenv("ASSISTANT_ID")
@@ -21,8 +37,13 @@ client = AzureOpenAI(
 # Initialize Flask app and Flask-SocketIO
 app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = "secret_key_provided_by_portal"
+app.config["SESSION_TYPE"] = "redis"
+app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_USE_SIGNER"] = True
+app.config["SESSION_REDIS"] = redis_client
+Session(app)
 jwt = JWTManager(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, message_queue=redis_url, cors_allowed_origins="*")
 
 
 # Define a simple route to check if the server is running
