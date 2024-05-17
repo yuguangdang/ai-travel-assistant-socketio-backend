@@ -1,4 +1,5 @@
 import eventlet
+
 eventlet.monkey_patch()
 
 import os
@@ -16,9 +17,14 @@ from event_handlers import add_message_to_thread
 load_dotenv()
 
 # Initialize Redis
-redis_url = os.getenv('REDIS_URL')
+redis_url = os.getenv("REDIS_URL")
 try:
-    redis_client = redis.StrictRedis.from_url(redis_url)
+    redis_client = redis.StrictRedis(
+        host=os.getenv("REDIS_HOST"),
+        port=6379,
+        password=os.getenv("REDIS_PASSWORD"),
+        ssl=False,  # Ensure SSL is disabled
+    )
     redis_client.ping()
     print("Connected to Redis server.")
 except redis.ConnectionError as e:

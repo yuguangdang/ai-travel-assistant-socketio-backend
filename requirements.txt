@@ -39,3 +39,4 @@ pymssql==2.3.0
 flask_jwt_extended==4.6.0
 eventlet==0.36.1
 flask_session==0.8.0
+redis==5.0.4
