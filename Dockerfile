@@ -17,5 +17,5 @@ EXPOSE 5000
 ENV FLASK_APP=app.py
 
 # Use Gunicorn to serve the application with eventlet support for handling websocket
-CMD ["gunicorn", "--worker-class", "gevent", "-w", "1", "app:app", "--bind", "0.0.0.0:5000"]
+CMD ["gunicorn", "--worker-class", "eventlet", "-w", "1", "app:app", "--bind", "0.0.0.0:5000"]
 
