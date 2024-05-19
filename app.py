@@ -1,3 +1,4 @@
+import json
 import os
 from flask import Flask, session, request
 from flask_jwt_extended import JWTManager, decode_token
@@ -40,11 +41,25 @@ app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = "secret_key_provided_by_portal"
 app.config["SESSION_TYPE"] = "redis"
 app.config["SESSION_PERMANENT"] = False
-app.config["SESSION_USE_SIGNER"] = True
+app.config["SESSION_USE_SIGNER"] = False
 app.config["SESSION_REDIS"] = redis_client
 Session(app)
 jwt = JWTManager(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, manage_session=True, cors_allowed_origins="*")
+
+
+# Helper functions to save and retrieve session data from Redis
+def save_session_to_redis(token, data):
+    # Convert the data dictionary to a JSON string
+    redis_client.set(f"session:{token}", json.dumps(data))
+
+
+def get_session_from_redis(token):
+    # Retrieve the data from Redis and convert it back to a dictionary
+    data = redis_client.get(f"session:{token}")
+    if data:
+        return json.loads(data.decode("utf-8"))  # Decode bytes to string and parse JSON
+    return None
 
 
 # Define a simple route to check if the server is running
@@ -61,25 +76,35 @@ def handle_session_start():
         print("WebSocket connection established. Session started.")
         token = request.args.get("token")
         if token:
-            # Save the session metadata
-            decoded_token = decode_token(token)
-            session["metadata"] = decoded_token
-            print("Session metadata saved:", session)
+            # Check if session data exists in Redis
+            session_data = get_session_from_redis(token)
+            if not session_data:
+                # If no session data, create new session and thread
+                metadata = decode_token(token)
+                session_data = {"metadata": metadata}
 
-            # Check if a thread ID is already in the session, if not, create a new thread
-            if "thread_id" not in session:
                 thread = client.beta.threads.create()
-                print("New thread has been created.")
-                session["thread_id"] = thread.id
-                print(f"New thread ({thread.id}) has been created for a new session.")
+                session_data["thread_id"] = thread.id
+                save_session_to_redis(token, session_data)
+                print(f"New session has been created for a new session: {session_data}")
 
                 # Create a greeting prompt including the metadata
-                greeting_prompt = f"Hello, please remember my metadata throughout our conversation: {session['metadata']}"
+                greeting_prompt = f"Hello, please remember my metadata throughout our conversation: {metadata}"
 
                 # Add the greeting message to the thread
                 add_message_to_thread(
                     thread.id, greeting_prompt, request.sid, client, socketio
                 )
+            else:
+                thread_id = session_data["thread_id"]
+                # Create a greeting prompt including the metadata
+                reconnect_prompt = f"Hello again, I'm back."
+
+                # Add the greeting message to the thread
+                add_message_to_thread(
+                    thread_id, reconnect_prompt, request.sid, client, socketio
+                )
+                print("Session data retrieved from Redis:", session_data)
         else:
             print("No token provided.")
             disconnect()
@@ -90,14 +115,27 @@ def handle_session_start():
 
 # Event handler for 'chat message' event
 @socketio.on("chat message")
-def handle_message(message):
-    # Check if a thread ID is in the session
-    if "thread_id" in session:
-        thread_id = session["thread_id"]
-        print(f"Received message: {message}, using thread {thread_id}")
+def handle_message(data):
+    token = data.get("token")
+    message = data.get("message")
+    if token:
+        # Retrieve session data from Redis
+        session_data = get_session_from_redis(token)
+        if session_data:
+            print("Session data in 'chat message' handler:", session_data)
 
-        # Add the received message to the thread
-        add_message_to_thread(thread_id, message, request.sid, client, socketio)
+            if "thread_id" in session_data:
+                thread_id = session_data["thread_id"]
+                print(f"Received message: {message}, using thread {thread_id}")
+
+                # Add the received message to the thread
+                add_message_to_thread(thread_id, message, request.sid, client, socketio)
+            else:
+                print("No thread ID found in the session.")
+        else:
+            print("No session data found.")
+    else:
+        print("No token provided.")
 
 
 # Run the Flask-SocketIO server
