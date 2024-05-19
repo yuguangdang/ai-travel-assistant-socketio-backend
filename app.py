@@ -38,7 +38,7 @@ client = AzureOpenAI(
 
 # Initialize Flask app and Flask-SocketIO
 app = Flask(__name__)
-app.config["JWT_SECRET_KEY"] = "secret_key_provided_by_portal"
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 app.config["SESSION_TYPE"] = "redis"
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_USE_SIGNER"] = False
