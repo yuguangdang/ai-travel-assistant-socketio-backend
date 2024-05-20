@@ -27,7 +27,6 @@ except redis.ConnectionError as e:
     print(f"Could not connect to Redis server: {e}")
     exit(1)
 
-
 # Initialize Azure OpenAI client with environment variables
 assistant_id = os.getenv("ASSISTANT_ID")
 client = AzureOpenAI(
@@ -46,6 +45,9 @@ app.config["SESSION_REDIS"] = redis_client
 Session(app)
 jwt = JWTManager(app)
 socketio = SocketIO(app, manage_session=True, cors_allowed_origins="*")
+
+# Store active connections
+active_connections = {}
 
 
 # Helper functions to save and retrieve session data from Redis
@@ -105,6 +107,16 @@ def handle_session_start():
                     thread_id, reconnect_prompt, request.sid, client, socketio
                 )
                 print("Session data retrieved from Redis:", session_data)
+
+            # Manage active connections
+            if token in active_connections:
+                old_sid = active_connections[token]
+                print(f"Disconnecting old WebSocket connection: {old_sid}")
+                disconnect(old_sid)
+
+            active_connections[token] = request.sid
+            print(f"Active connections: {active_connections}")
+
         else:
             print("No token provided.")
             disconnect()
@@ -136,6 +148,15 @@ def handle_message(data):
             print("No session data found.")
     else:
         print("No token provided.")
+
+
+# Event handler for 'disconnect' event
+@socketio.on("disconnect")
+def handle_disconnect():
+    token = request.args.get("token")
+    if token and token in active_connections:
+        del active_connections[token]
+        print(f"WebSocket connection closed. Active connections: {active_connections}")
 
 
 # Run the Flask-SocketIO server
