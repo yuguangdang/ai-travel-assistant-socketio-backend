@@ -88,7 +88,7 @@ def handle_session_start():
                 thread = client.beta.threads.create()
                 session_data["thread_id"] = thread.id
                 save_session_to_redis(token, session_data)
-                print(f"New session has been created for a new session: {session_data}")
+                print(f"New session created: {session_data}")
 
                 # Create a greeting prompt including the metadata
                 greeting_prompt = f"Hello, please remember my metadata throughout our conversation: {metadata}"
