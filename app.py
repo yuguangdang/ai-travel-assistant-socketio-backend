@@ -80,7 +80,7 @@ def handle_session_start():
             if not session_data:
                 # If no session data, create new session and thread
                 metadata = decode_token(token)
-                session_data = {"metadata": metadata, "sid": request.sid}
+                session_data = {"metadata": metadata}
 
                 thread = client.beta.threads.create()
                 session_data["thread_id"] = thread.id
@@ -95,46 +95,21 @@ def handle_session_start():
                     thread.id, greeting_prompt, request.sid, client, socketio
                 )
             else:
-                # Check if the session already has a sid
-                if session_data.get("sid"):
-                    print(
-                        "A session is already active, disconnecting this new connection."
-                    )
-                    disconnect()
-                else:
-                    # It has session but sid is None, hence, need to save the new sid
-                    session_data["sid"] = request.sid
-                    save_session_to_redis(token, session_data)
-                    thread_id = session_data["thread_id"]
-                    reconnect_prompt = f"Hello again, I'm back."
+                thread_id = session_data["thread_id"]
+                # Create a greeting prompt including the metadata
+                reconnect_prompt = f"Hello again, I'm back."
 
-                    # Add the greeting message to the thread
-                    add_message_to_thread(
-                        thread_id, reconnect_prompt, request.sid, client, socketio
-                    )
-                    print("Session data retrieved from Redis:", session_data)
+                # Add the greeting message to the thread
+                add_message_to_thread(
+                    thread_id, reconnect_prompt, request.sid, client, socketio
+                )
+                print("Session data retrieved from Redis:", session_data)
         else:
             print("No token provided.")
             disconnect()
     except Exception as e:
         print("JWT verification failed:", e)
         disconnect()
-
-
-# Event handler for 'disconnect' event
-@socketio.on("disconnect")
-def handle_disconnect():
-    try:
-        token = request.args.get("token")
-        if token:
-            session_data = get_session_from_redis(token)
-            if session_data and session_data.get("sid") == request.sid:
-                # Remove sid from session data on disconnect
-                session_data["sid"] = None
-                save_session_to_redis(token, session_data)
-                print(f"Session sid cleared for token: {token}")
-    except Exception as e:
-        print(f"Error during disconnect: {e}")
 
 
 # Event handler for 'chat message' event
