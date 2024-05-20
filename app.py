@@ -96,16 +96,16 @@ def handle_session_start():
                 )
             else:
                 # Check if the session already has a sid
-                if session_data.get("sid") != request.sid:
-                    # If there's already a different sid, disconnect the new connection
+                if session_data.get("sid"):
                     print(
                         "A session is already active, disconnecting this new connection."
                     )
                     disconnect()
                 else:
-                    # Re-establish connection if same sid
+                    # It has session but sid is None, hence, need to save the new sid
+                    session_data["sid"] = request.sid
+                    save_session_to_redis(token, session_data)
                     thread_id = session_data["thread_id"]
-                    # Create a greeting prompt including the metadata
                     reconnect_prompt = f"Hello again, I'm back."
 
                     # Add the greeting message to the thread
