@@ -1,6 +1,7 @@
 import json
 import os
 from flask import Flask, session, request
+from flask_cors import CORS
 from flask_jwt_extended import JWTManager, decode_token
 from flask_socketio import SocketIO, disconnect
 from flask_session import Session
@@ -38,6 +39,7 @@ client = AzureOpenAI(
 
 # Initialize Flask app and Flask-SocketIO
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 app.config["SESSION_TYPE"] = "redis"
 app.config["SESSION_PERMANENT"] = False
@@ -97,7 +99,7 @@ def handle_session_start():
             else:
                 thread_id = session_data["thread_id"]
                 # Create a greeting prompt including the metadata
-                reconnect_prompt = f"Hello again, I'm back."
+                reconnect_prompt = f"Hello again, I'm back, let's continue..."
 
                 # Add the greeting message to the thread
                 add_message_to_thread(
