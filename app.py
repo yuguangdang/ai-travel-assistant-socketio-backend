@@ -1,7 +1,6 @@
 import json
 import os
 from flask import Flask, session, request
-from flask_cors import CORS
 from flask_jwt_extended import JWTManager, decode_token
 from flask_socketio import SocketIO, disconnect
 from flask_session import Session
@@ -39,7 +38,6 @@ client = AzureOpenAI(
 
 # Initialize Flask app and Flask-SocketIO
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 app.config["SESSION_TYPE"] = "redis"
 app.config["SESSION_PERMANENT"] = False
