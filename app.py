@@ -97,23 +97,20 @@ def handle_session_start():
                 greeting_prompt = f"Hello, please remember my metadata throughout our conversation: {metadata}"
 
                 # Add the greeting message to the thread
-                # add_message_to_thread(
-                #     thread.id, greeting_prompt, request.sid, client, socketio
-                # )
+                add_message_to_thread(
+                    thread.id, greeting_prompt, request.sid, client, socketio
+                )
             else:
+                print("Session data retrieved from Redis:", session_data)
                 thread_id = session_data["thread_id"]
                 # Create a greeting prompt including the metadata
                 reconnect_prompt = f"Hello again, I'm back, let's continue..."
 
                 # Add the greeting message to the thread
-                try:
-                    # add_message_to_thread(
-                    #     thread_id, reconnect_prompt, request.sid, client, socketio
-                    # )
-                    print("Session data retrieved from Redis:", session_data)
-                except Exception as e:
-                    print(f"Failed to add message to thread: {e}")
-                    disconnect()
+                add_message_to_thread(
+                    thread_id, reconnect_prompt, request.sid, client, socketio
+                )
+
         else:
             print("No token provided.")
             disconnect()
