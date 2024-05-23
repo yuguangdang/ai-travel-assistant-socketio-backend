@@ -1,5 +1,6 @@
 import json
 import os
+import socket
 from flask import Flask, session, request
 from flask_jwt_extended import JWTManager, decode_token
 from flask_socketio import SocketIO, disconnect
@@ -72,6 +73,11 @@ def index():
 @socketio.on("connect")
 def handle_session_start():
     try:
+        # Log connection establishment
+        token = request.args.get("token")
+        instance_id = socket.gethostname()
+        print(f"New connection to instance: {instance_id}")
+        
         # Log connection establishment
         token = request.args.get("token")
         if token:
