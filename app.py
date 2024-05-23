@@ -76,7 +76,7 @@ def handle_session_start():
         # Log connection establishment
         token = request.args.get("token")
         instance_id = socket.gethostname()
-        print(f"New connection to instance: {instance_id}")
+        print(f"\n New connection to instance: {instance_id}")
         
         # Log connection establishment
         token = request.args.get("token")
@@ -106,10 +106,14 @@ def handle_session_start():
                 reconnect_prompt = f"Hello again, I'm back, let's continue..."
 
                 # Add the greeting message to the thread
-                add_message_to_thread(
-                    thread_id, reconnect_prompt, request.sid, client, socketio
-                )
-                print("Session data retrieved from Redis:", session_data)
+                try:
+                    add_message_to_thread(
+                        thread_id, reconnect_prompt, request.sid, client, socketio
+                    )
+                    print("Session data retrieved from Redis:", session_data)
+                except Exception as e:
+                    print(f"Failed to add message to thread: {e}")
+                    disconnect()
         else:
             print("No token provided.")
             disconnect()
@@ -145,4 +149,5 @@ def handle_message(data):
 
 # Run the Flask-SocketIO server
 if __name__ == "__main__":
-    socketio.run(app, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port, debug=True)
