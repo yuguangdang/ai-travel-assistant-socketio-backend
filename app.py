@@ -102,6 +102,7 @@ def handle_session_start():
                 )
             else:
                 print("Session data retrieved from Redis:", session_data)
+                socketio.emit("chat message chunk", {"data":"test"}, room=request.sid)
                 thread_id = session_data["thread_id"]
                 # Create a greeting prompt including the metadata
                 reconnect_prompt = f"Hello again, I'm back, let's continue..."
