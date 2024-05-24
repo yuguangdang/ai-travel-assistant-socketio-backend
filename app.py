@@ -107,9 +107,9 @@ def handle_session_start():
                 reconnect_prompt = f"Hello again, I'm back, let's continue..."
 
                 # Add the greeting message to the thread
-                add_message_to_thread(
-                    thread_id, reconnect_prompt, request.sid, client, socketio
-                )
+                # add_message_to_thread(
+                #     thread_id, reconnect_prompt, request.sid, client, socketio
+                # )
 
         else:
             print("No token provided.")
