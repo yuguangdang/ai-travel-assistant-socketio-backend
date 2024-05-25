@@ -102,15 +102,14 @@ def handle_session_start():
                 )
             else:
                 print("Session data retrieved from Redis:", session_data)
-                socketio.emit("chat message chunk", {"data":"test"}, room=request.sid)
                 thread_id = session_data["thread_id"]
                 # Create a greeting prompt including the metadata
                 reconnect_prompt = f"Hello again, I'm back, let's continue..."
 
                 # Add the greeting message to the thread
-                # add_message_to_thread(
-                #     thread_id, reconnect_prompt, request.sid, client, socketio
-                # )
+                add_message_to_thread(
+                    thread_id, reconnect_prompt, request.sid, client, socketio
+                )
 
         else:
             print("No token provided.")
