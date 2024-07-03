@@ -1,6 +1,6 @@
 ## Overview
 
-This is the WebSocket backend of the AI travel assistant that leverages Flask, Flask-SocketIO, and Azure OpenAI to provide interactive chat services. The server is designed to handle chat sessions, manage user data with Redis, and integrate various tools and APIs to enhance the chat experience.
+This is the WebSocket backend of the AI travel assistant project that leverages Flask, Flask-SocketIO, and Azure OpenAI to provide interactive chat services. The server is designed to handle chat sessions, manage user data with Redis, and integrate various tools and APIs to enhance the chat experience.
 
 ## Architecture
 <img width="882" height="662" alt="intro-m" src="https://github.com/yuguangdang/ai-travel-assistant-frontend/assets/55920971/32ec8ed4-f30a-43d7-8d72-cbde5081475d">
