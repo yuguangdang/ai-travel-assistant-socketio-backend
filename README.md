@@ -10,6 +10,7 @@ This is the WebSocket backend of the AI travel assistant project that leverages 
 
 - **Flask Web Server**: Provides the main application framework.
 - **Flask-SocketIO**: Enables real-time bidirectional communication between the server and clients.
+- **RAG (Retrieval-Augmented Generation)**: Enhance the accuracy and relevance of the fAI responses.
 - **JWT Authentication**: Secures communication with JSON Web Tokens.
 - **Redis**: Manages session data for scalability and reliability.
 - **Azure OpenAI**: Powers the chatbot with advanced AI capabilities.
