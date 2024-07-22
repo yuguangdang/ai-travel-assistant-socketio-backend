@@ -1,6 +1,6 @@
 ## Overview
 
-This is the WebSocket backend of the AI travel assistant project that leverages Flask, Flask-SocketIO, and Azure OpenAI to provide interactive chat services. The server is designed to handle chat sessions, manage user data with Redis, and adopts RAG (Retrieval-Augemented Generation) to enhance the AI response.
+This project showcases an AI assistant chat application that supports three communication methods: standard HTTP, Server-Sent Events (SSE), and WebSocket with streaming capabilities. The frontend dynamically connects to two Flask servers based on the chosen communication method. These Flask servers interface with an OpenAI-powered travel assistant, capable of automating various travel inquiries, such as searching flight schedules and checking visa requirements. To enhance AI responses, the system employs Retrieval-Augmented Generation (RAG). Additionally, the application integrates with an external chat system, providing users with a seamless experience when interacting with both AI travel assistants and human consultants.
 
 ## Architecture
 <img width="882" height="662" alt="intro-m" src="https://github.com/yuguangdang/ai-travel-assistant-frontend/assets/55920971/32ec8ed4-f30a-43d7-8d72-cbde5081475d">
